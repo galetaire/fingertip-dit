@@ -4,7 +4,7 @@ An unofficial community fork of [Fingertip](https://github.com/imperviousinc/fin
 Impervious, the Handshake (HNS) resolver, with a working, up-to-date `hnsd`. Builds for
 **Windows** (`.msi`) and **Linux** (`.AppImage`).
 
-Not affiliated with or endorsed by Impervious Inc. Fingertip is © Impervious Inc., licensed under Apache-2.0. All credit to them.
+Not affiliated with or endorsed by Impervious Inc., licensed under Apache-2.0. All credit to them.
 
 ## Why
 
