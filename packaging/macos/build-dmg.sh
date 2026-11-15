@@ -71,7 +71,10 @@ pushd "$B/hnsd" >/dev/null
 quiet ./autogen.sh
 quiet ./configure --host="$HOST" --with-unbound="$DEPS" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   LIBS="-L$DEPS/lib -lssl -lcrypto"
-quiet make  # serial: the bundled libuv has a parallel-make race
+# hnsd's Makefile.am hard-codes CFLAGS/LDFLAGS, which overrides configure's; a
+# make command-line assignment wins over both. Serial: the bundled libuv has a
+# parallel-make race.
+quiet make CFLAGS="-Wall -Wno-unused-function -std=gnu11 $CFLAGS" LDFLAGS="$LDFLAGS"
 popd >/dev/null
 
 echo "==> official Fingertip 0.0.3 app"
