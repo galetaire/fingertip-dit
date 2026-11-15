@@ -1,0 +1,45 @@
+name: Build macOS DMG
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Attach the DMG to this existing release tag (leave empty to only build)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install build dependencies
+        run: |
+          brew install autoconf automake libtool
+          # fingertip and hnsd-core are x86_64; Apple Silicon runners need Rosetta 2
+          if [ "$(uname -m)" = arm64 ]; then
+            /usr/bin/pgrep -q oahd || sudo softwareupdate --install-rosetta --agree-to-license
+          fi
+      - name: Build DMG
+        run: bash packaging/macos/build-dmg.sh
+      - name: Smoke test hnsd from the DMG
+        run: |
+          MNT=$(mktemp -d)
+          hdiutil attach -nobrowse -readonly -mountpoint "$MNT" dist/Fingertip-dit-*.dmg
+          codesign --verify --strict --deep --verbose=2 "$MNT/Fingertip-dit.app"
+          bash packaging/smoke-test.sh "$MNT/Fingertip-dit.app/Contents/MacOS/hnsd"
+          hdiutil detach "$MNT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*
+      - name: Attach to release
+        if: inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.release_tag }}" dist/* --clobber -R "${{ github.repository }}"
