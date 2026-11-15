@@ -2,7 +2,7 @@
 
 An unofficial community fork of [Fingertip](https://github.com/imperviousinc/fingertip) by
 Impervious, the Handshake (HNS) resolver, with a working, up-to-date `hnsd`. Builds for
-**Windows** (`.msi`) and **Linux** (`.AppImage`).
+**Windows** (`.msi`), **Linux** (`.AppImage`) and **macOS** (`.dmg`).
 
 Not affiliated with or endorsed by Impervious Inc., licensed under Apache-2.0. All credit to them.
 
@@ -55,6 +55,21 @@ chmod +x Fingertip-dit-0.0.4-x86_64.AppImage
 - Fingertip doesn't configure Linux automatically (that's unchanged from 0.0.3). On
   first launch it opens its setup page, which walks you through setting your browser's
   proxy and trusting its certificate.
+
+### macOS
+
+Open `Fingertip-dit-0.0.4.dmg` and drag **Fingertip-dit** to Applications.
+
+- **macOS blocks it on first open.** The app isn't signed with an Apple developer
+  identity (Impervious's signature can't survive the hnsd swap), so right-click → Open
+  gives "cannot be opened". Go to **System Settings → Privacy & Security** and click
+  **Open Anyway**, once. Check the download against the `.sha256` file in the release.
+- **Intel build.** Impervious only built `fingertip` for Intel, so this package is Intel
+  too. On Apple Silicon it runs under Rosetta 2, which macOS offers to install on first
+  launch. Needs macOS 10.13 or newer.
+- Fingertip's **Auto configure** sets the system auto-proxy URL and adds its certificate
+  to your login keychain, like 0.0.3 did.
+- `hnsd` saves its headers in `~/Library/Application Support/Fingertip-dit/hnsd-data`.
 
 On first start, lookups fail for about 2 minutes while `hnsd` syncs from its checkpoint.
 After that, names resolve.
@@ -136,6 +151,40 @@ so no `sudo` is needed.
 
 Fingertip writes nothing outside your home folder on Linux, so that's everything.
 
+### macOS
+
+As on Windows, **Auto configure** changes settings outside the app: the system
+auto-proxy URL (for every network service) and a trusted certificate in your login
+keychain. Undo those first, while the app is still installed.
+
+1. **Remove Fingertip's configuration.** Click the menu-bar icon → **Options** →
+   untick **Auto configure** → **Yes**. This turns the auto-proxy off, deletes the
+   Firefox `user.js` it wrote, and removes its current certificate.
+2. **Turn off start at login.** In the menu, untick **Open at login**.
+3. **Quit** from the menu.
+4. **Delete the app:** drag `/Applications/Fingertip-dit.app` to the Trash.
+5. **Delete the data and anything left over.** In Terminal:
+
+   ```sh
+   # settings, logs, and Fingertip's certificate authority (including its private key)
+   rm -rf ~/Library/Application\ Support/Fingertip
+   # hnsd's saved headers
+   rm -rf ~/Library/Application\ Support/Fingertip-dit
+   # start-at-login entry, if step 2 was skipped
+   rm -f ~/Library/LaunchAgents/com.impervious.fingertip.plist
+   ```
+
+**If you already deleted the app without step 1:**
+- **Proxy:** **System Settings → Network → (your connection) → Details… → Proxies**,
+  turn off **Automatic Proxy Configuration** if its URL is
+  `http://127.0.0.1:9590/proxy.pac`. Otherwise web pages won't load. Repeat for Wi-Fi
+  and Ethernet if you use both.
+- **Certificate:** open **Keychain Access**, pick the **login** keychain, search for
+  **DNSSEC**, and delete every certificate with that name. Fingertip creates a new one
+  each time its data is reset, and step 1 only removes the current one.
+- **Firefox:** in `~/Library/Application Support/Firefox/Profiles/<profile>/`, delete
+  `user.js` if its first line is `// AUTOCONFIG:FINGERTIP`, then restart Firefox.
+
 ## Build from source
 
 ### Windows
@@ -173,6 +222,25 @@ copies (only the AppIndicator tray libraries stay; the app uses the system GTK),
 `dist/Fingertip-dit-0.0.4-x86_64.AppImage`. The [Build Linux AppImage](.github/workflows/build.yml)
 GitHub Actions workflow runs the same script, checks that hnsd syncs, and launches the app
 on Ubuntu 24.04, Debian 12, Fedora and Arch.
+
+### macOS
+
+On a Mac with the Xcode command line tools (Intel or Apple Silicon):
+
+```sh
+brew install autoconf automake libtool
+git clone --recursive https://github.com/galetaire/fingertip-dit.git
+cd fingertip-dit
+./packaging/macos/build-dmg.sh
+```
+
+This builds OpenSSL and Unbound from source as static Intel libraries (so the app keeps
+running on macOS 10.13+), builds `hnsd` against them, takes `Fingertip.app` out of the
+official v0.0.3 DMG (checked by SHA-256), swaps the old `hnsd` and its OpenSSL 1.1
+frameworks for `hnsd-core` plus the launcher ([`wrapper/hnsd-wrapper-macos.c`](wrapper/hnsd-wrapper-macos.c)),
+renames the bundle to `Fingertip-dit.app` with its own bundle ID, signs it ad hoc, and
+writes `dist/Fingertip-dit-0.0.4.dmg`. The [Build macOS DMG](.github/workflows/build-macos.yml)
+workflow runs the same script and checks that hnsd syncs from the mounted DMG.
 
 `third_party/fingertip` is pinned to the v0.0.3 source for reference. The binary
 isn't rebuilt from it, so the shipped `fingertip` binaries are byte-identical to the
