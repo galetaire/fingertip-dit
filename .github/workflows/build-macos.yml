@@ -33,7 +33,8 @@ jobs:
           hdiutil attach -nobrowse -readonly -mountpoint "$MNT" dist/Fingertip-dit-*.dmg
           codesign --verify --strict --deep --verbose=2 "$MNT/Fingertip-dit.app"
           bash packaging/smoke-test.sh "$MNT/Fingertip-dit.app/Contents/MacOS/hnsd"
-          hdiutil detach "$MNT"
+          # the killed hnsd may still hold the volume for a moment
+          hdiutil detach "$MNT" || { sleep 5; hdiutil detach -force "$MNT"; }
       - uses: actions/upload-artifact@v4
         with:
           name: macos
