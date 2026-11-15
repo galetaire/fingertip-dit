@@ -23,6 +23,9 @@ B="$PWD/build/macos"
 DEPS="$B/deps"
 rm -rf "$B" && mkdir -p "$B" "$DEPS" dist
 CFLAGS="-arch $ARCH -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET -O2"
+# The linker needs the arch too, or on an Apple Silicon host it links for arm64
+# and finds no usable symbols in the x86_64 objects.
+LDFLAGS="-arch $ARCH -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET"
 HOST=x86_64-apple-darwin
 JOBS=$(sysctl -n hw.ncpu)
 
@@ -57,7 +60,7 @@ tar -xzf "$B/unbound.tar.gz" -C "$B"
 pushd "$B/unbound-$UNBOUND_VERSION" >/dev/null
 quiet ./configure --host="$HOST" --prefix="$DEPS" --disable-shared --enable-static \
   --with-ssl="$DEPS" --with-libexpat="$(xcrun --show-sdk-path)/usr" \
-  --disable-flto --without-pythonmodule --without-pyunbound CFLAGS="$CFLAGS"
+  --disable-flto --without-pythonmodule --without-pyunbound CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS"
 quiet make -j"$JOBS" lib
 quiet make install-lib
 popd >/dev/null
@@ -66,7 +69,7 @@ echo "==> hnsd ($(git -C third_party/hnsd rev-parse --short HEAD))"
 git -C third_party/hnsd archive --format=tar --prefix=hnsd/ HEAD | tar -x -C "$B"
 pushd "$B/hnsd" >/dev/null
 quiet ./autogen.sh
-quiet ./configure --host="$HOST" --with-unbound="$DEPS" CFLAGS="$CFLAGS" \
+quiet ./configure --host="$HOST" --with-unbound="$DEPS" CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" \
   LIBS="-L$DEPS/lib -lssl -lcrypto"
 quiet make  # serial: the bundled libuv has a parallel-make race
 popd >/dev/null
