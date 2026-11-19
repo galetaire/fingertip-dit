@@ -1,4 +1,4 @@
-# Fingertip-dit
+# Fingertip-dit ☝️
 
 An unofficial community fork of [Fingertip](https://github.com/imperviousinc/fingertip) by
 Impervious, the Handshake (HNS) resolver, with a working, up-to-date `hnsd`. Builds for
